@@ -193,6 +193,11 @@ impl aura::Trait for Runtime {
 	type AuthorityId = AuraId;
 }
 
+impl poe::Trait for Runtime {
+    type Event = Event;
+}
+
+
 impl grandpa::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
@@ -273,6 +278,7 @@ construct_runtime!(
 		Sudo: sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		PoeModule: poe::{Module, Call, Storage, Event<T>},
 	}
 );
 
