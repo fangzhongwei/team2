@@ -129,10 +129,7 @@ decl_module! {
             let (owner, _block_number, price) = Proofs::<T>::get(&claim);
             ensure!(offer_price >= price, Error::<T>::NotEnoughPrice);
 
-
             Self::deposit_event(RawEvent::ClaimSelled(claim, owner, sender, offer_price));
-
-
             Ok(())
         }
     }
