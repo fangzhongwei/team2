@@ -1,6 +1,6 @@
 [package]
 authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
-description = 'FRAME pallet proof of existence'
+description = 'FRAME pallet poe'
 edition = '2018'
 homepage = 'https://substrate.io'
 license = 'Unlicense'
@@ -44,16 +44,9 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
-[dependencies.sp-runtime]
+[dev-dependencies.sp-runtime]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'v2.0.0-rc2'
-version = '2.0.0-rc2'
-
-[dependencies.balances]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-package = 'pallet-balances'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
