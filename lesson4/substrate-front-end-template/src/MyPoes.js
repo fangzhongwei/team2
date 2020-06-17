@@ -13,10 +13,12 @@ function Main(props) {
         const addresses = keyring.getPairs().map(account => account.address);
         let unsubscribeAll = null;
 
-        api.query.system.account
-            .multi(addresses, balances => {
+        alert(api.query.poeModule.accountProofs.length);
+
+        api.query.poeModule.accountProofs
+            .multi(addresses, proofs => {
                 const balancesMap = addresses.reduce((acc, address, index) => ({
-                    ...acc, [address]: balances[index].data.free.toHuman()
+                    ...acc, [address]: JSON.stringify(proofs[index])
                 }), {});
                 setBalances(balancesMap);
             }).then(unsub => {
@@ -28,7 +30,7 @@ function Main(props) {
 
     return (
         <Grid.Column>
-            <h1>Balances</h1>
+            <h1>Poe List</h1>
             <Table celled striped size='small'>
                 <Table.Body>{accounts.map(account =>
                         <Table.Row key={account.address}>
@@ -37,16 +39,7 @@ function Main(props) {
               <span style={{ display: 'inline-block', minWidth: '31em' }}>
                 {account.address}
               </span>
-                                <CopyToClipboard text={account.address}>
-                                    <Button
-                                        basic
-                                        circular
-                                        compact
-                                        size='mini'
-                                        color='blue'
-                                        icon='copy outline'
-                                    />
-                                </CopyToClipboard>
+
                             </Table.Cell>
                             <Table.Cell width={3}>{
                                 balances && balances[account.address] &&
