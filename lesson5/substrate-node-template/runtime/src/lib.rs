@@ -193,6 +193,15 @@ impl aura::Trait for Runtime {
 	type AuthorityId = AuraId;
 }
 
+impl kitties::Trait for Runtime {
+
+}
+impl poe::Trait for Runtime {
+    type Event = Event;
+    type MaxClaimLength = MaxClaimLength;
+}
+
+
 impl grandpa::Trait for Runtime {
 	type Event = Event;
 	type Call = Call;
@@ -252,21 +261,13 @@ impl sudo::Trait for Runtime {
 	type Call = Call;
 }
 
+parameter_types! {
+    pub const MaxClaimLength: u32 = 256;
+}
+
 /// Used for the module template in `./template.rs`
 impl template::Trait for Runtime {
 	type Event = Event;
-}
-
-// 附加题答案
-parameter_types! {
-	pub const MaxClaimLength: u32 = 6;
-}
-
-impl poe::Trait for Runtime {
-	type Event = Event;
-	
-	// 附加题答案
-	type MaxClaimLength = MaxClaimLength;
 }
 
 construct_runtime!(
@@ -286,6 +287,7 @@ construct_runtime!(
 		// Used for the module template in `./template.rs`
 		TemplateModule: template::{Module, Call, Storage, Event<T>},
 		PoeModule: poe::{Module, Call, Storage, Event<T>},
+		Kitties: kitties::{Module, Call, Storage},
 	}
 );
 

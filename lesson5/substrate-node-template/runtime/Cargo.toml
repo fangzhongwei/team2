@@ -159,6 +159,12 @@ package = 'pallet-poe'
 path = '../pallets/poe'
 version = '2.0.0-rc2'
 
+[dependencies.kitties]
+default-features = false
+package = 'pallet-kitties'
+path = '../pallets/kitties'
+version = '0.1.0'
+
 [dependencies.timestamp]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -202,6 +208,7 @@ std = [
     'transaction-payment/std',
     'template/std',
     'poe/std',
+    'kitties/std',
 ]
 
 [build-dependencies.wasm-builder-runner]
