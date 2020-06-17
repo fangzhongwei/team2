@@ -14,6 +14,7 @@ import Metadata from './Metadata';
 import NodeInfo from './NodeInfo';
 import TemplateModule from './TemplateModule';
 import PoeModule from './PoeModule';
+import MyPoes from './MyPoes';
 import Transfer from './Transfer';
 import Upgrade from './Upgrade';
 
@@ -68,6 +69,9 @@ function Main () {
           </Grid.Row>
           <Grid.Row>
             <TemplateModule accountPair={accountPair} />
+          </Grid.Row>
+          <Grid.Row>
+            <MyPoes accountPair={accountPair} />
           </Grid.Row>
           <Grid.Row>
             <PoeModule accountPair={accountPair} />

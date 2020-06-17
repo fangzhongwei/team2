@@ -18,6 +18,7 @@ function Main(props) {
 
 
     const [accountSelected, setAccountSelected] = useState('');
+    const [comment, setComment] = useState('');
     const { keyring } = useSubstrate();
     const keyringOptions = keyring.getPairs().map(account => ({
         key: account.address,
@@ -56,6 +57,10 @@ function Main(props) {
         fileReader.onload = bufferToDigest;
         fileReader.readAsArrayBuffer(file);
     };
+    const handleCommentChange = (c) => {
+
+        setComment(c);
+    };
 
     const onChange = address => {
         setAccountSelected(address);
@@ -71,6 +76,15 @@ function Main(props) {
                         id='file'
                         lable='Your File'
                         onChange={(e) => handleFileChosen(e.target.files[0])}
+                    />
+                </Form.Field>
+                <Form.Field>
+                    Comment:
+                    <Input
+                        type='input'
+                        id='comment'
+                        lable='Comment'
+                        onChange={(e) => handleCommentChange(e.value)}
                     />
                 </Form.Field>
 
@@ -113,7 +127,7 @@ function Main(props) {
                         attrs={{
                             palletRpc: 'poeModule',
                             callable: 'createClaim',
-                            inputParams: [digest],
+                            inputParams: [digest, new Date().getTime(), comment],
                             paramFields: [true]
                         }}
                     />
