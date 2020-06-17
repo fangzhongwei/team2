@@ -9,7 +9,9 @@
 /// For more guidance on Substrate FRAME, see the example pallet
 /// https://github.com/paritytech/substrate/blob/master/frame/example/src/lib.rs
 
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch, ensure, traits::{Get}};
+use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch, ensure, traits::{Get},
+					dispatch::{DispatchError, DispatchResult},
+					traits::{Currency, ExistenceRequirement::AllowDeath, Imbalance, OnUnbalanced}};
 use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 use sp_runtime::traits::StaticLookup;
@@ -49,6 +51,7 @@ decl_event!(
 	    ClaimRevoked(AccountId, Vec<u8>),
         ClaimTransfered(AccountId, Vec<u8>, AccountId),
         ClaimSelled(Vec<u8>, AccountId, AccountId, u32),
+        TransferEvent(AccountId, AccountId, BalanceOf<T>),
     }
 );
 
@@ -130,6 +133,18 @@ decl_module! {
             ensure!(offer_price >= price, Error::<T>::NotEnoughPrice);
 
             Self::deposit_event(RawEvent::ClaimSelled(claim, owner, sender, offer_price));
+            Ok(())
+        }
+
+        #[weight = 0]
+        pub fn transfer_currency(origin, dest: <T::Lookup as StaticLookup>::Source, amount: BalanceOf<T>) -> dispatch::DispatchResult {
+            let sender = ensure_signed(origin)?;
+            let dest = T::Lookup::lookup(dest)?;
+
+			T::Currency::transfer(&sender, &dest, amount, AllowDeath)
+				.map_err(|_| DispatchError::Other("Can't transfer."))?;
+
+            Self::deposit_event(RawEvent::TransferEvent(sender, dest, amount));
             Ok(())
         }
     }
