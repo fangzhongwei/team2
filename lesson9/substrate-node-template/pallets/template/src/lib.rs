@@ -20,6 +20,7 @@ use sp_core::crypto::KeyTypeId;
 use sp_std::prelude::*;
 
 use sp_runtime::{
+    offchain as rt_offchain,
     offchain::storage::StorageValueRef
 };
 
@@ -27,6 +28,10 @@ use alt_serde::{Deserialize, Deserializer};
 use sp_std::prelude::*;
 use sp_std::str;
 use parity_scale_codec::{Decode, Encode};
+
+
+pub const HTTP_REMOTE_REQUEST_BYTES: &[u8] = b"https://www.mxc.ai/open/api/v1/data/depth?market=BTC_USDT&depth=1";
+pub const HTTP_HEADER_USER_AGENT: &[u8] = b"lesson9";
 
 #[cfg(test)]
 mod mock;
@@ -107,6 +112,7 @@ decl_error! {
 		/// Value reached maximum and cannot be incremented further
 		StorageOverflow,
         AlreadyFetched,
+        HttpFetchingError,
 	}
 }
 
@@ -146,7 +152,7 @@ decl_module! {
 #[serde(crate = "alt_serde")]
 #[derive(Deserialize, Encode, Decode, Default)]
 struct CacheInfo {
-    price: u32
+    code: u32
 }
 
 impl <T: Trait> Module<T> {
@@ -156,7 +162,7 @@ impl <T: Trait> Module<T> {
         let s_lock = StorageValueRef::persistent(b"lesson9::lock");
 
         if let Some(Some(cache_info)) = s_info.get::<CacheInfo>() {
-            debug::info!("cached cache_info: {:?}", cache_info.price);
+            debug::info!("cached cache_info: {:?}", cache_info.code);
         }
 
         let res: Result<Result<bool, bool>, Error<T>> = s_lock.mutate(|s: Option<Option<bool>>| {
@@ -171,7 +177,7 @@ impl <T: Trait> Module<T> {
                 Ok(info) => {
                     s_info.set(&info);
                     s_lock.set(&false);
-                    debug::info!("fetched price: {:?}", info.price);
+                    debug::info!("fetched price: {:?}", info.code);
                 }
                 Err(_) => {
                     s_lock.set(&false);
@@ -182,8 +188,62 @@ impl <T: Trait> Module<T> {
     }
 
     fn fetch_eth_price_from_https() -> Result<CacheInfo, Error<T>> {
+
+
+        //just return a number from http
         
-        Ok(CacheInfo{price: 12u32})
+
+        let remote_url_bytes = HTTP_REMOTE_REQUEST_BYTES.to_vec();
+		let user_agent = HTTP_HEADER_USER_AGENT.to_vec();
+		let remote_url =
+			str::from_utf8(&remote_url_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+		debug::info!("sending request to: {}", remote_url);
+
+		// Initiate an external HTTP GET request. This is using high-level wrappers from `sp_runtime`.
+		let request = rt_offchain::http::Request::get(remote_url);
+
+		// Keeping the offchain worker execution time reasonable, so limiting the call to be within 3s.
+		let timeout = sp_io::offchain::timestamp().add(rt_offchain::Duration::from_millis(3000));
+
+		// For github API request, we also need to specify `user-agent` in http request header.
+		//   See: https://developer.github.com/v3/#user-agent-required
+		let pending = request
+			.add_header(
+				"User-Agent",
+				str::from_utf8(&user_agent).map_err(|_| <Error<T>>::HttpFetchingError)?,
+			)
+			.deadline(timeout) // Setting the timeout time
+			.send() // Sending the request out by the host
+			.map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+		// By default, the http request is async from the runtime perspective. So we are asking the
+		//   runtime to wait here.
+		// The returning value here is a `Result` of `Result`, so we are unwrapping it twice by two `?`
+		//   ref: https://substrate.dev/rustdocs/v2.0.0-rc2/sp_runtime/offchain/http/struct.PendingRequest.html#method.try_wait
+		let response = pending
+			.try_wait(timeout)
+			.map_err(|_| <Error<T>>::HttpFetchingError)?
+			.map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+		if response.code != 200 {
+			debug::error!("Unexpected http request status code: {}", response.code);
+			return Err(<Error<T>>::HttpFetchingError);
+		}
+
+		// Next we fully read the response body and collect it to a vector of bytes.
+		let response_array = response.body().collect::<Vec<u8>>();
+
+        let resp_str = str::from_utf8(&response_array).map_err(|_| <Error<T>>::HttpFetchingError)?;
+		// Print out our fetched JSON string
+		debug::info!("{}", resp_str);
+
+		// Deserializing JSON to struct, thanks to `serde` and `serde_derive`
+		let cache_info: CacheInfo =
+			serde_json::from_str(&resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+
+        Ok(cache_info)
 
     }
 }
