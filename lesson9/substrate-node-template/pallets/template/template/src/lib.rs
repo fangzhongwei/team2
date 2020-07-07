@@ -19,14 +19,6 @@ use frame_system::{self as system, ensure_signed,
 use sp_core::crypto::KeyTypeId;
 use sp_std::prelude::*;
 
-use sp_runtime::{
-    offchain::storage::StorageValueRef
-};
-
-use alt_serde::{Deserialize, Deserializer};
-use sp_std::prelude::*;
-use sp_std::str;
-use parity_scale_codec::{Decode, Encode};
 
 #[cfg(test)]
 mod mock;
@@ -106,7 +98,6 @@ decl_error! {
 		NoneValue,
 		/// Value reached maximum and cannot be incremented further
 		StorageOverflow,
-        AlreadyFetched,
 	}
 }
 
@@ -137,53 +128,39 @@ decl_module! {
 
 		fn offchain_worker(block_number: T::BlockNumber) {
 			debug::info!("Entering off-chain workers");
-            Self::fetch_eth_price();
+            Self::submit_number(block_number);
 		}
 
 	}
 }
 
-#[serde(crate = "alt_serde")]
-#[derive(Deserialize, Encode, Decode, Default)]
-struct CacheInfo {
-    price: u32
-}
-
 impl <T: Trait> Module<T> {
-    fn fetch_eth_price() {
+    fn submit_number(block_number: T::BlockNumber) {
+        let index: u64 = block_number.try_into().ok().unwrap() as u64;
+        let latest: u64 = if index > 0 {
+            Self::number((index - 1) as u64)
+        } else {
+            0u64
+        };
 
-        let s_info = StorageValueRef::persistent(b"lesson9::eth-price");
-        let s_lock = StorageValueRef::persistent(b"lesson9::lock");
+        let new: u64 = latest.saturating_add((index + 1).saturating_pow(2));
 
-        if let Some(Some(cache_info)) = s_info.get::<CacheInfo>() {
-            debug::info!("cached cache_info: {:?}", cache_info.price);
+        let signer = Signer::<T, T::AuthorityId>::all_accounts();
+
+        if !signer.can_sign() {
+            debug::error!("No local account available");
+            return;
         }
 
-        let res: Result<Result<bool, bool>, Error<T>> = s_lock.mutate(|s: Option<Option<bool>>| {
-            match s {
-                None | Some(Some(false)) => Ok(true),
-                _ => Err(<Error<T>>::AlreadyFetched),
-            }
-        });       
+        let results = signer.send_signed_transaction(|_acct| {
+            Call::save_number(index, new)
+        });
 
-        if let Ok(Ok(true)) = res {
-            match Self::fetch_eth_price_from_https() {
-                Ok(info) => {
-                    s_info.set(&info);
-                    s_lock.set(&false);
-                    debug::info!("fetched price: {:?}", info.price);
-                }
-                Err(_) => {
-                    s_lock.set(&false);
-                }
+        for(_acc, res) in &results {
+            match res {
+                Ok(()) => {debug::native::info!("off-chain tx successed: number is : {}", new);}
+                Err(_e) => {debug::error!("off-chain tx failed: number: {}", new)}
             }
         }
-
-    }
-
-    fn fetch_eth_price_from_https() -> Result<CacheInfo, Error<T>> {
-        
-        Ok(CacheInfo{price: 12u32})
-
     }
 }
